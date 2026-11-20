@@ -13,12 +13,14 @@
 #include "src/log.h"
 
 static ssize_t wmemu_pincb(struct btd_adapter *adapter, struct btd_device *device,
-						char *pinbuf, bool *display,
-						unsigned int attempt)
+						char *pinbuf, gboolean *display)
 {
 	//force Wii pin (bdaddr bytes backwards)
 	//very basic, no filtering, does this for all devices
-	memcpy(pinbuf, device, 6);
+	bdaddr_t address;
+	device_get_address(device, &address, NULL);
+	memcpy(pinbuf, &address, 6);
+	*display = FALSE;
 	return 6;
 }
 

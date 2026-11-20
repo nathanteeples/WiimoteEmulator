@@ -121,7 +121,7 @@ class Bridge:
                 json.dump(cfg, f)
             os.replace(temp, DATA / 'config.json')
             self.cfg = cfg
-            self.configure_mqtt()
+        self.configure_mqtt()
 
     def submit(self, action):
         if action not in ('on', 'off', 'pair'):

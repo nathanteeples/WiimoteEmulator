@@ -440,10 +440,7 @@ int main(int argc, char *argv[])
         else
           printf("POWER_OFF_FAILED\n");
       }
-      else
-      {
-        graceful_disconnect(&host_bdaddr);
-      }
+      // Normal quit uses the socket cleanup below.
     }
 
     if (is_connected && send_report_now)
