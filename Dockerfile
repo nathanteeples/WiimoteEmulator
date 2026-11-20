@@ -6,7 +6,7 @@ RUN curl -fsSL https://www.kernel.org/pub/linux/bluetooth/bluez-4.101.tar.xz -o 
  && echo '41f9578bef39b8c94a2d6ddeaa556afd22d136936d0f03100e422fe970a45a7d  bluez.tar.xz' | sha256sum -c - \
  && tar -xf bluez.tar.xz && cd bluez-4.101 \
  && patch -p0 < ../bluez-disable-sdp.patch \
- && CFLAGS='-O2 -fcommon' ./configure --prefix=/opt/wiimote/bluez-4.101/dist --with-systemdunitdir=/tmp/system --disable-service --disable-audio --disable-input --disable-serial --disable-udev --disable-cups --disable-test --disable-tools \
+ && CFLAGS='-O2 -fcommon' ./configure --prefix=/opt/wiimote/bluez-4.101/dist --sysconfdir=/etc --localstatedir=/var --with-systemdunitdir=/tmp/system --disable-service --disable-audio --disable-input --disable-serial --disable-udev --disable-cups --disable-test --disable-tools \
  && make -j2 && make install \
  && cd ../bluez-plugin && make && mkdir -p ../bluez-4.101/dist/lib/bluetooth/plugins \
  && cp wmemu.so ../bluez-4.101/dist/lib/bluetooth/plugins/ \
@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 python3
 WORKDIR /opt/wiimote
 COPY --from=build /opt/wiimote/bluez-4.101/dist ./bluez-4.101/dist
 COPY --from=build /opt/wiimote/wmemulator ./wmemulator
+COPY --from=build /etc/dbus-1/system.d/bluetooth.conf /etc/dbus-1/system.d/bluetooth.conf
 COPY eeprom.bin .
 COPY requirements.txt .
 RUN python3 -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
