@@ -340,11 +340,32 @@ int set_device_bdaddr(int dd, const struct hci_version * ver, const bdaddr_t * b
 				return -1;
 			}
 
-			/* CSR RAM PSKEY updates require the vendor warm reset to apply. */
+			/* A CSR reset may close the HCI socket before its response arrives.
+			 * Reopen the same controller and verify the address, rather than
+			 * treating that expected disconnect as a setup failure. */
 			if (ver->manufacturer == 10) {
-				if (vendor[i].reset_device(dd) < 0)
+				struct sockaddr_hci source;
+				socklen_t source_len = sizeof(source);
+				if (getsockname(dd, (struct sockaddr *)&source, &source_len) < 0)
 					return -1;
-				sleep(1);
+				printf("Resetting CSR adapter hci%d to apply Bluetooth address\n", source.hci_dev);
+				vendor[i].reset_device(dd);
+				int ready = 0;
+				for (int attempt = 0; attempt < 20; attempt++) {
+					usleep(250000);
+					int probe = hci_open_dev(source.hci_dev);
+					if (probe < 0) continue;
+					bdaddr_t actual;
+					if (hci_read_bd_addr(probe, &actual, 500) == 0 &&
+					    bacmp(&actual, bdaddr) == 0 && dup2(probe, dd) >= 0)
+						ready = 1;
+					close(probe);
+					if (ready) break;
+				}
+				if (!ready) {
+					fprintf(stderr, "CSR adapter did not recover with the requested address\n");
+					return -1;
+				}
 			}
 			return 0;
 		}
