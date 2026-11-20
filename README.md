@@ -129,8 +129,7 @@ Bluetooth/MQTT boundaries and run with `python -m unittest discover -s tests -v`
 ### Unraid
 
 Use `unraid/my-Wii-Power-Bridge.xml` in Unraid's user templates directory:
-`/boot/config/plugins/dockerMan/templates-user/`. A companion JSON representation
-is provided at `unraid/wiimote-power-bridge.json`; Unraid imports the XML version.
+`/boot/config/plugins/dockerMan/templates-user/`.
 Choose **Docker → Add Container → Wii-Power-Bridge**, enter a strong `WEB_TOKEN`,
 and apply. The template uses host port **8087** (`WEB_PORT`) to avoid a port 8080
 conflict on NTnet, and stores pairing/configuration under
