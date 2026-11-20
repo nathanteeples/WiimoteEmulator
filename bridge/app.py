@@ -47,6 +47,7 @@ class Bridge:
         self.paired = None
         self.client = None
         self.status = dict(action='idle', result='No command sent', mqtt=False)
+        print('Wii bridge started; Bluetooth adapter: hci0', flush=True)
         threading.Thread(target=self.worker, daemon=True).start()
         self.configure_mqtt()
 
@@ -131,6 +132,7 @@ class Bridge:
                 raise ValueError('Configure the console Bluetooth address first')
             if self.status['action'] != 'idle' or not self.jobs.empty():
                 raise ValueError('A command is already active')
+            print(f'Command accepted: {action}', flush=True)
             self.status['action'] = action
             self.jobs.put_nowait((action, self.cfg.copy()))
 
@@ -160,6 +162,7 @@ class Bridge:
         self.paired = None
         sockpath = '/run/wiimote-input.sock'
         Path(sockpath).unlink(missing_ok=True)
+        print(f'Starting emulator: action={action} adapter=hci0', flush=True)
         self.proc = subprocess.Popen(['stdbuf', '-oL', './wmemulator',
                                       'pair' if action == 'pair' else cfg['console'], 'unix', sockpath],
                                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -196,6 +199,7 @@ class Bridge:
                 result = str(exc)
             with self.lock:
                 self.status.update(action='idle', result=result)
+            print(f'Command completed: {action}: {result}', flush=True)
             self.publish('result', json.dumps(dict(command=action, result=result)))
             self.jobs.task_done()
 

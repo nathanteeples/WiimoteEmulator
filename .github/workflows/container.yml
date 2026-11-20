@@ -66,6 +66,21 @@ jobs:
           done
           curl -fsS -u ci:ci-test-password http://127.0.0.1:8080/ | grep -q 'Wii power bridge'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/config)" = 401
+      - name: Test browser command buttons
+        if: matrix.arch == 'amd64'
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+          docker run -d --name browser-smoke -p 127.0.0.1:8080:8080 \
+            -e WEB_TOKEN=ci-test-password --entrypoint /opt/venv/bin/gunicorn \
+            "$IMAGE:build-$GITHUB_SHA-amd64" \
+            --workers 1 --threads 4 --bind 0.0.0.0:8080 bridge.wsgi:app
+          trap 'docker logs browser-smoke; docker rm -f browser-smoke' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS -u ci:ci-test-password http://127.0.0.1:8080/api/status; then break; fi
+            sleep 1
+          done
+          node .github/tests/buttons.cjs
   publish:
     needs: container
     if: github.event_name != 'pull_request'
