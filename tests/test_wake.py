@@ -22,13 +22,21 @@ class WakeTests(unittest.TestCase):
             self.assertEqual(b.last_wake_request,0)
             self.assertFalse((Path(d)/'wake-state.json').exists())
 
+    def test_confirmed_wake_clears_boot_cooldown(self):
+        with tempfile.TemporaryDirectory() as d, patch('bridge.app.DATA', Path(d)):
+            b=self.new_bridge()
+            b.read_output(Mock(stdout=iter(['WAKE_SIGNAL_SENT\n','WAKE_CONFIRMED\n'])))
+            self.assertTrue(b.wake_confirmed.is_set())
+            self.assertEqual(b.last_wake_request,0)
+            self.assertFalse((Path(d)/'wake-state.json').exists())
+
     def test_unconfirmed_wake_cooldown_survives_restart(self):
         with tempfile.TemporaryDirectory() as d, patch('bridge.app.DATA', Path(d)):
             (Path(d)/'wake-state.json').write_text(json.dumps({'last_request':time.time()}))
             b=self.new_bridge();proc=Mock()
             proc.wait.side_effect=lambda **kw: (b.recent_wake.set() or 2)
             with patch('bridge.app.subprocess.Popen',return_value=proc) as spawn, patch('bridge.app.threading.Thread'):
-                result=b.wake_console({'console':'40:D2:8A:43:4E:C8'})
+                result=b.wake_console({'console':'00:11:22:33:44:55'})
             self.assertIn('--probe-only',spawn.call_args.args[0])
             self.assertIn('no second power-button',result)
 
@@ -37,13 +45,13 @@ class WakeTests(unittest.TestCase):
             b=self.new_bridge();proc=Mock();proc.wait.return_value=0
             with patch('bridge.app.subprocess.Popen',return_value=proc), patch('bridge.app.threading.Thread'):
                 with self.assertRaises(RuntimeError):
-                    b.wake_console({'console':'40:D2:8A:43:4E:C8'})
+                    b.wake_console({'console':'00:11:22:33:44:55'})
 
     def test_existing_awake_console_does_not_mark_new_wake(self):
         with tempfile.TemporaryDirectory() as d, patch('bridge.app.DATA', Path(d)):
             b=self.new_bridge();proc=Mock();proc.wait.side_effect=lambda **kw: (b.already_awake.set() or 0)
             with patch('bridge.app.subprocess.Popen',return_value=proc), patch('bridge.app.threading.Thread'):
-                result=b.wake_console({'console':'40:D2:8A:43:4E:C8'})
+                result=b.wake_console({'console':'00:11:22:33:44:55'})
             self.assertIn('already awake',result)
             self.assertEqual(b.last_wake_request,0)
             self.assertFalse((Path(d)/'wake-state.json').exists())

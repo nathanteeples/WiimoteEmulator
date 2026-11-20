@@ -153,6 +153,13 @@ class Bridge:
             self.status['result'] = 'Waiting for console pairing' if action == 'pair' else 'Sending power command'
             self.jobs.put_nowait((action, self.cfg.copy()))
 
+    def clear_wake_request(self):
+        self.last_wake_request = 0
+        try:
+            (DATA / 'wake-state.json').unlink(missing_ok=True)
+        except OSError as exc:
+            self.log('Unable to clear wake cooldown: ' + str(exc))
+
     def read_output(self, proc):
         for line in proc.stdout:
             self.log(line.rstrip())
@@ -173,17 +180,14 @@ class Bridge:
                     self.log('Unable to persist wake cooldown: ' + str(exc))
             if 'WAKE_CONFIRMED' in line:
                 self.wake_confirmed.set()
+                self.clear_wake_request()
             if 'WAKE_ALREADY_AWAKE' in line:
                 self.already_awake.set()
             if 'WAKE_RECENT_REQUEST' in line:
                 self.recent_wake.set()
             if 'POWER_OFF_SENT' in line:
                 self.power_sent.set()
-                self.last_wake_request = 0
-                try:
-                    (DATA / 'wake-state.json').unlink(missing_ok=True)
-                except OSError as exc:
-                    self.log('Unable to clear wake cooldown: ' + str(exc))
+                self.clear_wake_request()
 
     def stop(self):
         proc = self.proc
