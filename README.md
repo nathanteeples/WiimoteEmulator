@@ -73,7 +73,7 @@ packages may be private; set package visibility to public or authenticate Docker
 with a GitHub token with `read:packages` permission.
 
 1. Use a Linux host with a dedicated Bluetooth adapter exposed as **hci0**.
-   The upstream code supports only that adapter. Docker Desktop on macOS/Windows
+   Set HCI_DEVICE to select another adapter (for example hci1 or its MAC address). Docker Desktop on macOS/Windows
    cannot provide the required host Bluetooth sockets.
 2. Stop the host Bluetooth service (`sudo systemctl stop bluetooth`) before
    starting the container. The bundled patched BlueZ owns the adapter exclusively.
@@ -134,8 +134,10 @@ Choose **Docker → Add Container → Wii-Power-Bridge**, enter a strong `WEB_TO
 and apply. The template uses host port **8087** (`WEB_PORT`) to avoid a port 8080
 conflict on NTnet, and stores pairing/configuration under
 `/mnt/user/appdata/wiimote-power-bridge`. Configure console pairing and MQTT in
-the web interface. The adapter must be hci0 and available exclusively to this
+the web interface. The adapter selected by HCI_DEVICE must be available exclusively to this
 container. No host D-Bus mount or privileged mode is required.
 
 The image's default web port remains 8080; set `WEB_PORT` to change it. Update
 Unraid's WebUI link alongside the variable when changing the template's port.
+
+Set `HCI_DEVICE=hci1` to use a second adapter. Pairing listeners, outgoing connections, and power-off HCI commands are bound to that adapter; missing adapters fail instead of falling back to another controller. A Bluetooth MAC address can also select the adapter across changes in HCI numbering.

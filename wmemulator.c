@@ -27,6 +27,7 @@
 #define PSM_INT 0x13
 
 bdaddr_t host_bdaddr;
+bdaddr_t local_bdaddr;
 int has_host = 0;
 
 int sdp_fd, ctrl_fd, int_fd;
@@ -87,6 +88,15 @@ int l2cap_connect(bdaddr_t bdaddr, int psm)
 
   memset(&addr, 0, sizeof(addr));
   addr.l2_family = AF_BLUETOOTH;
+  bacpy(&addr.l2_bdaddr, &local_bdaddr);
+  if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+  {
+    close(fd);
+    return -1;
+  }
+
+  memset(&addr, 0, sizeof(addr));
+  addr.l2_family = AF_BLUETOOTH;
   addr.l2_psm    = htobs(psm);
   addr.l2_bdaddr = bdaddr;
 
@@ -113,7 +123,7 @@ int l2cap_listen(int psm)
   memset(&addr, 0, sizeof(addr));
   addr.l2_family = AF_BLUETOOTH;
   addr.l2_psm = htobs(psm);
-  addr.l2_bdaddr = *BDADDR_ANY;
+  bacpy(&addr.l2_bdaddr, &local_bdaddr);
 
   if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
   {
@@ -278,6 +288,18 @@ int main(int argc, char *argv[])
   {
     printf("failed to set up Bluetooth device\n");
     return 1;
+  }
+
+  if (get_device_bdaddr(get_selected_device_id(), &local_bdaddr) < 0)
+  {
+    fprintf(stderr, "Unable to read selected adapter address\n");
+    restore_device();
+    return 1;
+  }
+  {
+    char address[18];
+    ba2str(&local_bdaddr, address);
+    printf("Binding Bluetooth sockets to %s\n", address);
   }
 
 #ifndef SDP_SERVER

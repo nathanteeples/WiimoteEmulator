@@ -395,10 +395,27 @@ int restore_simple_pairing_mode(int dd)
   return 0;
 }
 
+int get_selected_device_id(void)
+{
+  static int selected = -2;
+  if (selected == -2)
+  {
+    const char *device = getenv("HCI_DEVICE");
+    if (!device || !*device) device = "hci0";
+    selected = hci_devid(device);
+    if (selected < 0)
+      fprintf(stderr, "Selected Bluetooth adapter %s is unavailable: %s\n", device, strerror(errno));
+    else
+      printf("Using Bluetooth adapter hci%d\n", selected);
+  }
+  return selected;
+}
+
 int set_up_device(char * dev_str)
 {
-  int device_id = 0, dd, ret;
+  int device_id = get_selected_device_id(), dd, ret;
 
+  if (device_id < 0) return -1;
   dd = hci_open_dev(device_id);
   if (dd < 0)
   {
@@ -451,8 +468,9 @@ int set_up_device(char * dev_str)
 
 int restore_device()
 {
-  int device_id = 0, dd, ret;
+  int device_id = get_selected_device_id(), dd, ret;
 
+  if (device_id < 0) return -1;
   dd = hci_open_dev(device_id);
   if (dd < 0)
   {
@@ -508,7 +526,7 @@ int power_off_host(const bdaddr_t * host_bdaddr)
   int ret, dd;
   struct hci_conn_info_req * cr;
   
-  dd = hci_open_dev(hci_get_route((bdaddr_t *)host_bdaddr));
+  dd = hci_open_dev(get_selected_device_id());
   if (dd < 0)
   {
     return dd;
@@ -556,12 +574,13 @@ int get_device_bdaddr(int device_id, bdaddr_t * out_bdaddr)
 
 int find_wiimote(bdaddr_t * out_bdaddr)
 {
-  int device_id = 0, dd;
+  int device_id = get_selected_device_id(), dd;
   int max_rsp, num_rsp;
   inquiry_info *ii = NULL;
   int i, len, flags;
   char name[248] = { 0 };
 
+  if (device_id < 0) return -1;
   dd = hci_open_dev(device_id);
   if (dd < 0)
   {

@@ -47,7 +47,7 @@ class Bridge:
         self.paired = None
         self.client = None
         self.status = dict(action='idle', result='No command sent', mqtt=False, logs=[])
-        self.log('Wii bridge started; Bluetooth adapter: hci0')
+        self.log('Wii bridge started; Bluetooth adapter: ' + os.getenv('HCI_DEVICE', 'hci0'))
         threading.Thread(target=self.worker, daemon=True).start()
         self.configure_mqtt()
 
@@ -169,7 +169,7 @@ class Bridge:
         self.paired = None
         sockpath = '/run/wiimote-input.sock'
         Path(sockpath).unlink(missing_ok=True)
-        self.log(f'Starting emulator: action={action} adapter=hci0')
+        self.log(f'Starting emulator: action={action} adapter=' + os.getenv('HCI_DEVICE', 'hci0'))
         self.proc = subprocess.Popen(['stdbuf', '-oL', './wmemulator',
                                       'pair' if action == 'pair' else cfg['console'], 'unix', sockpath],
                                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
