@@ -1,0 +1,60 @@
+{
+  "format": "Unraid Docker template companion JSON",
+  "version": 2,
+  "Name": "Wii-Power-Bridge",
+  "Repository": "ghcr.io/nathanteeples/wiimoteemulator:latest",
+  "Registry": "https://github.com/nathanteeples/WiimoteEmulator/pkgs/container/wiimoteemulator",
+  "Network": "host",
+  "MyIP": "",
+  "MyMAC": "",
+  "Shell": "sh",
+  "Privileged": "false",
+  "Support": "https://github.com/nathanteeples/WiimoteEmulator/issues",
+  "Project": "https://github.com/nathanteeples/WiimoteEmulator",
+  "Overview": "Wii Bluetooth power control with a configuration UI and Home Assistant MQTT discovery. Requires exclusive access to hci0; stop any host Bluetooth service before starting. Pair using the Wii SYNC button and the web UI, then configure your MQTT broker. Command results do not measure actual console power state. Set a strong WEB_TOKEN before starting. Uses host port 8087; update WEB_PORT and the WebUI link together if changed.",
+  "Category": "HomeAutomation:",
+  "WebUI": "http://[IP]:8087",
+  "TemplateURL": "https://raw.githubusercontent.com/nathanteeples/WiimoteEmulator/master/unraid/my-Wii-Power-Bridge.xml",
+  "Icon": "",
+  "ExtraParams": "--cap-add=NET_ADMIN --cap-add=NET_RAW --stop-timeout=30",
+  "PostArgs": "",
+  "CPUset": "",
+  "Config": [
+    {
+      "Name": "Appdata",
+      "Target": "/data",
+      "Default": "/mnt/user/appdata/wiimote-power-bridge",
+      "Mode": "rw",
+      "Description": "Persistent pairing keys and configuration, including the MQTT password.",
+      "Type": "Path",
+      "Display": "always",
+      "Required": "true",
+      "Mask": "false",
+      "Value": "/mnt/user/appdata/wiimote-power-bridge"
+    },
+    {
+      "Name": "Web UI password",
+      "Target": "WEB_TOKEN",
+      "Default": "",
+      "Mode": "",
+      "Description": "Required: enter a strong password. Sign in to the web UI with any username and this password.",
+      "Type": "Variable",
+      "Display": "always",
+      "Required": "true",
+      "Mask": "true",
+      "Value": ""
+    },
+    {
+      "Name": "Web UI port",
+      "Target": "WEB_PORT",
+      "Default": "8087",
+      "Mode": "",
+      "Description": "Host network listening port. Update the template WebUI link if changed.",
+      "Type": "Variable",
+      "Display": "always",
+      "Required": "true",
+      "Mask": "false",
+      "Value": "8087"
+    }
+  ]
+}

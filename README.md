@@ -125,3 +125,18 @@ using the repository's `GITHUB_TOKEN` (`packages: write`). No registry password
 secret is needed. See `.github/workflows/container.yml`. Hardware pairing/power
 checks cannot be performed on GitHub-hosted runners. Unit tests use mocked
 Bluetooth/MQTT boundaries and run with `python -m unittest discover -s tests -v`.
+
+### Unraid
+
+Use `unraid/my-Wii-Power-Bridge.xml` in Unraid's user templates directory:
+`/boot/config/plugins/dockerMan/templates-user/`. A companion JSON representation
+is provided at `unraid/wiimote-power-bridge.json`; Unraid imports the XML version.
+Choose **Docker → Add Container → Wii-Power-Bridge**, enter a strong `WEB_TOKEN`,
+and apply. The template uses host port **8087** (`WEB_PORT`) to avoid a port 8080
+conflict on NTnet, and stores pairing/configuration under
+`/mnt/user/appdata/wiimote-power-bridge`. Configure console pairing and MQTT in
+the web interface. The adapter must be hci0 and available exclusively to this
+container. No host D-Bus mount or privileged mode is required.
+
+The image's default web port remains 8080; set `WEB_PORT` to change it. Update
+Unraid's WebUI link alongside the variable when changing the template's port.
