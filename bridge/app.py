@@ -46,6 +46,15 @@ class Bridge:
         self.power_sent = threading.Event()
         self.paired = None
         self.client = None
+        self.last_wake_request = 0
+        try:
+            self.last_wake_request = float(json.loads((DATA / 'wake-state.json').read_text()).get('last_request', 0))
+        except (OSError, ValueError, TypeError):
+            pass
+        self.wake_sent = threading.Event()
+        self.wake_confirmed = threading.Event()
+        self.already_awake = threading.Event()
+        self.recent_wake = threading.Event()
         self.status = dict(action='idle', result='No command sent', mqtt=False, logs=[])
         self.log('Wii bridge started; Bluetooth adapter: ' + os.getenv('HCI_DEVICE', 'hci0'))
         threading.Thread(target=self.worker, daemon=True).start()
@@ -151,6 +160,23 @@ class Bridge:
             if match:
                 self.paired = match.group(1).upper()
                 self.connected.set()
+            if 'WAKE_SIGNAL_SENT' in line:
+                self.wake_sent.set()
+                self.last_wake_request = time.time()
+                try:
+                    temp = DATA / 'wake-state.tmp'
+                    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+                    with os.fdopen(fd, 'w') as f:
+                        json.dump({'last_request': self.last_wake_request}, f)
+                    os.replace(temp, DATA / 'wake-state.json')
+                except OSError as exc:
+                    self.log('Unable to persist wake cooldown: ' + str(exc))
+            if 'WAKE_CONFIRMED' in line:
+                self.wake_confirmed.set()
+            if 'WAKE_ALREADY_AWAKE' in line:
+                self.already_awake.set()
+            if 'WAKE_RECENT_REQUEST' in line:
+                self.recent_wake.set()
             if 'POWER_OFF_SENT' in line:
                 self.power_sent.set()
 
@@ -164,7 +190,34 @@ class Bridge:
                 proc.kill()
                 proc.wait()
 
+    def wake_console(self, cfg):
+        for event in (self.wake_sent, self.wake_confirmed, self.already_awake, self.recent_wake):
+            event.clear()
+        args = ['stdbuf', '-oL', './wmwake', cfg['console']]
+        if time.time() - self.last_wake_request < 60:
+            args.append('--probe-only')
+        self.log('Checking console power and authenticated Bluetooth wake')
+        self.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        reader = threading.Thread(target=self.read_output, args=(self.proc,), daemon=True)
+        reader.start()
+        try:
+            code = self.proc.wait(timeout=60)
+            reader.join(timeout=2)
+            if self.already_awake.is_set():
+                return 'Console already awake; no power-button signal sent'
+            if self.wake_confirmed.is_set():
+                return 'Wake confirmed: console HID service is available'
+            if self.recent_wake.is_set():
+                return 'Recent wake request still pending; no second power-button signal sent'
+            if self.wake_sent.is_set():
+                return 'Wake signal sent; console HID service did not become ready within 35 seconds'
+            raise RuntimeError('Wake failed before power-button signal (exit ' + str(code) + '); check Bluetooth log')
+        finally:
+            self.stop()
+
     def execute(self, action, cfg):
+        if action == 'on':
+            return self.wake_console(cfg)
         self.connected.clear()
         self.power_sent.clear()
         self.paired = None

@@ -150,3 +150,16 @@ provide certificate-authenticated transport, stable controller identity, USB
 hotplug recovery, heartbeats, and startup supervisors. The Android executable is
 built separately in GitHub Actions. Pairing timeout defaults to five minutes and
 can be changed with `PAIR_TIMEOUT`.
+
+### Wii U wake behavior
+
+Power on uses the dedicated `wmwake` helper. A standby Wii U accepts an
+authenticated Bluetooth ACL connection but does not answer the normal HID channel
+request. The helper first checks for an awake HID/L2CAP host; if it answers,
+no power-button signal is sent. Otherwise, after authenticating the saved bond,
+it sends the Wiimote power-button disconnect reason `0x15` and waits up to 35
+seconds for the console's HID channel to become available. A recent unconfirmed
+wake is not repeated for 60 seconds, including across a container restart, to
+avoid toggling a console that is still booting. Power off retains the existing
+connected-controller shutdown path. Power confirmation is based on Bluetooth
+service availability rather than direct measurement of the front-panel LED.

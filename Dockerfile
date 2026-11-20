@@ -11,12 +11,13 @@ RUN curl -fsSL https://www.kernel.org/pub/linux/bluetooth/bluez-4.101.tar.xz -o 
  && make -j2 && make install \
  && cd ../bluez-plugin && make && mkdir -p ../bluez-4.101/dist/lib/bluetooth/plugins \
  && cp wmemu.so ../bluez-4.101/dist/lib/bluetooth/plugins/ \
- && cd .. && CUSTOM_BUILD=1 make wmemulator
+ && cd .. && CUSTOM_BUILD=1 make wmemulator wmwake
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv dbus libglib2.0-0 libsdl1.2debian libudev1 ca-certificates tini && rm -rf /var/lib/apt/lists/*
 WORKDIR /opt/wiimote
 COPY --from=build /opt/wiimote/bluez-4.101/dist ./bluez-4.101/dist
 COPY --from=build /opt/wiimote/wmemulator ./wmemulator
+COPY --from=build /opt/wiimote/wmwake ./wmwake
 COPY --from=build /etc/dbus-1/system.d/bluetooth.conf /etc/dbus-1/system.d/bluetooth.conf
 COPY --from=build /opt/wiimote/bluez-4.101/src/main.conf /etc/bluetooth/main.conf
 COPY eeprom.bin .
