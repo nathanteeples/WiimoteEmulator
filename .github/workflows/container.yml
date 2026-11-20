@@ -19,18 +19,64 @@ jobs:
       - run: python -m unittest discover -s tests -v
   container:
     needs: test
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - name: Image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - uses: docker/login-action@v3
         if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          push: ${{ github.event_name != 'pull_request' }}
+          load: true
+          tags: ${{ env.IMAGE }}:build-${{ github.sha }}-${{ matrix.arch }}
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+      - name: Test packaged HTTP service
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          docker run -d --name web-smoke -p 127.0.0.1:8080:8080 \
+            -e WEB_TOKEN=ci-test-password --entrypoint /opt/venv/bin/gunicorn \
+            "$IMAGE:build-$GITHUB_SHA-$ARCH" \
+            --workers 1 --threads 4 --bind 0.0.0.0:8080 bridge.wsgi:app
+          trap 'docker logs web-smoke; docker rm -f web-smoke' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS -u ci:ci-test-password http://127.0.0.1:8080/api/status; then break; fi
+            sleep 1
+          done
+          curl -fsS -u ci:ci-test-password http://127.0.0.1:8080/ | grep -q 'Wii power bridge'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/config)" = 401
+  publish:
+    needs: container
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - name: Image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -43,12 +89,13 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
             type=ref,event=tag
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Publish multi-architecture manifest
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        shell: bash
+        run: |
+          args=()
+          while IFS= read -r tag; do args+=(--tag "$tag"); done <<< "$TAGS"
+          docker buildx imagetools create "${args[@]}" \
+            "$IMAGE:build-$GITHUB_SHA-amd64" "$IMAGE:build-$GITHUB_SHA-arm64"
+          docker buildx imagetools inspect "$IMAGE:sha-${GITHUB_SHA:0:7}"
