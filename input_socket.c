@@ -15,7 +15,7 @@ static bool input_socket_init_from_addrinfo(struct addrinfo *addrinfo);
 
 static int sock;
 static char buf[512];
-static size_t buf_len;
+static ssize_t buf_len;
 
 void input_socket_init_unix_at_path(char const *path)
 {
@@ -113,13 +113,13 @@ static bool input_socket_poll_event(struct input_event *event)
     }
   }
   buf[buf_len] = '\0';
-  printf("received %d bytes: %s\n", buf_len, buf);
+  printf("received %zd bytes: %s\n", buf_len, buf);
 
   event->type = INPUT_EVENT_TYPE_BUTTON;
 
   char event_type_s[32], event_param_s[32];
   int event_status;
-  if (sscanf(buf, "%32s %d %32s", event_type_s, &event_status, event_param_s) == EOF)
+  if (sscanf(buf, "%31s %d %31s", event_type_s, &event_status, event_param_s) != 3)
   {
     printf(PROGRAM_NAME ": received input in invalid format\n");
     buf_len = 0;

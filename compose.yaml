@@ -1,0 +1,14 @@
+services:
+  wiimote:
+    image: ghcr.io/nathanteeples/wiimoteemulator:latest
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      WEB_TOKEN: ${WEB_TOKEN:?Set WEB_TOKEN in .env}
+    volumes:
+      - wiimote-data:/data
+volumes:
+  wiimote-data:

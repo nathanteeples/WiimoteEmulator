@@ -1,0 +1,6 @@
+.git
+work
+__pycache__
+*.pyc
+.env
+bluez-4.101

@@ -145,7 +145,7 @@ int set_up_device_address(int dd, int device_id)
   //check if bdaddr already has a Nintendo OUI (e.g. it was manually set)
   uap = (original_bdaddr.b[5] << 16) | (original_bdaddr.b[4] << 8) |
     original_bdaddr.b[3];
-  for (i = 0; i < sizeof(nintendo_ouis); i++)
+  for (i = 0; i < sizeof(nintendo_ouis) / sizeof(nintendo_ouis[0]); i++)
   {
     if (nintendo_ouis[i] == uap)
     {

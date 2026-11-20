@@ -1,5 +1,5 @@
-bluez-4.101
-wmemulator
-packedtest
-*.o
-*.so
+.env
+__pycache__/
+*.pyc
+.venv/
+bluez-4.101/

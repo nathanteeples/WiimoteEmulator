@@ -258,7 +258,7 @@ int main(int argc, char *argv[])
     input_socket_init_unix_at_path(argv[3]);
     input_source = input_source_socket;
   }
-  else if (argc > 3 && strcmp(argv[3], "ip") == 0)
+  else if (argc > 3 && strcmp(argv[2], "ip") == 0)
   {
     input_socket_init_ip_on_port(argv[3]);
     input_source = input_source_socket;
@@ -435,7 +435,10 @@ int main(int argc, char *argv[])
       running = 0;
       if (input_result == -2)
       {
-        power_off_host(&host_bdaddr);
+        if (power_off_host(&host_bdaddr) == 0)
+          printf("POWER_OFF_SENT\n");
+        else
+          printf("POWER_OFF_FAILED\n");
       }
       else
       {
