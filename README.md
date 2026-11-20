@@ -141,3 +141,12 @@ The image's default web port remains 8080; set `WEB_PORT` to change it. Update
 Unraid's WebUI link alongside the variable when changing the template's port.
 
 Set `HCI_DEVICE=hci1` to use a second adapter. Pairing listeners, outgoing connections, and power-off HCI commands are bound to that adapter; missing adapters fail instead of falling back to another controller. A Bluetooth MAC address can also select the adapter across changes in HCI numbering.
+
+### Remote USB adapter on rooted ONN
+
+For an adapter located near the console rather than the server, see
+[`relay/README.md`](relay/README.md). The rooted Android relay and Unraid client
+provide certificate-authenticated transport, stable controller identity, USB
+hotplug recovery, heartbeats, and startup supervisors. The Android executable is
+built separately in GitHub Actions. Pairing timeout defaults to five minutes and
+can be changed with `PAIR_TIMEOUT`.
