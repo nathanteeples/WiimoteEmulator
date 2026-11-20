@@ -70,7 +70,6 @@ jobs:
         if: matrix.arch == 'amd64'
         run: |
           npm install --no-save playwright@1.56.1
-          npx playwright install --with-deps chromium
           docker run -d --name browser-smoke -p 127.0.0.1:8080:8080 \
             -e WEB_TOKEN=ci-test-password --entrypoint /opt/venv/bin/gunicorn \
             "$IMAGE:build-$GITHUB_SHA-amd64" \
