@@ -1,0 +1,39 @@
+name: Build rooted ONN USB relay
+on:
+  push:
+    branches: [master, main]
+    paths: ['relay/**', '.github/workflows/onn-relay.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download verified Mbed TLS LTS
+        run: |
+          curl -fsSL https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-3.6.8/mbedtls-3.6.8.tar.bz2 -o /tmp/mbedtls.tar.bz2
+          echo 'bc54b818e87f49c0b3281dd85d24adaede0e63b4e822e3fbd49c005a38b9595b  /tmp/mbedtls.tar.bz2' | sha256sum -c -
+          mkdir -p /tmp/mbedtls
+          tar -xf /tmp/mbedtls.tar.bz2 -C /tmp/mbedtls --strip-components=1
+      - name: Build Android ARMv7 binary
+        run: |
+          cmake -S /tmp/mbedtls -B /tmp/mbed-build \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=android-24 \
+            -DENABLE_TESTING=OFF -DENABLE_PROGRAMS=OFF -DCMAKE_BUILD_TYPE=MinSizeRel
+          cmake --build /tmp/mbed-build --parallel 4
+          mkdir -p dist
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang" \
+            -O2 -Wall -Wextra -I/tmp/mbedtls/include relay/onn_usb_relay.c \
+            /tmp/mbed-build/library/libmbedtls.a /tmp/mbed-build/library/libmbedx509.a /tmp/mbed-build/library/libmbedcrypto.a \
+            -o dist/onn-usb-relay
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip" dist/onn-usb-relay
+          cp /tmp/mbedtls/LICENSE dist/MBEDTLS-LICENSE
+          file dist/onn-usb-relay
+          sha256sum dist/onn-usb-relay > dist/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: onn-usb-relay-armv7
+          path: dist/
