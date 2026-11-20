@@ -340,6 +340,12 @@ int set_device_bdaddr(int dd, const struct hci_version * ver, const bdaddr_t * b
 				return -1;
 			}
 
+			/* CSR RAM PSKEY updates require the vendor warm reset to apply. */
+			if (ver->manufacturer == 10) {
+				if (vendor[i].reset_device(dd) < 0)
+					return -1;
+				sleep(1);
+			}
 			return 0;
 		}
 	}

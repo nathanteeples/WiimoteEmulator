@@ -183,6 +183,14 @@ int set_up_device_address(int dd, int device_id)
       device_id, strerror(errno), errno);
   }
 
+  bdaddr_t applied_bdaddr;
+  if (hci_read_bd_addr(dd, &applied_bdaddr, HCI_TIMEOUT) < 0 ||
+      bacmp(&applied_bdaddr, &wiimote_baddr))
+  {
+    fprintf(stderr, "Bluetooth address change did not take effect on hci%d\n", device_id);
+    return -1;
+  }
+  printf("Nintendo Bluetooth address applied on hci%d\n", device_id);
   return 0;
 }
 
