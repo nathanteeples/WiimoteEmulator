@@ -66,7 +66,7 @@ def session(cfg,ctx):
         log.info('Connected to ONN %s via %s; %s controller %s',cfg['host'],conn.version(),adapter,address)
         state(state='connected',host=cfg['host'],adapter=adapter,controller_address=address,tls=conn.version())
         conn.setblocking(False)
-        incoming=bytearray();outgoing=bytearray();last_rx=time.monotonic();heartbeat=last_rx
+        incoming=bytearray();outgoing=bytearray();send_chunk=None;last_rx=time.monotonic();heartbeat=last_rx
         while running:
             now=time.monotonic()
             if now-last_rx>35:raise TimeoutError('Relay heartbeat timed out')
@@ -79,9 +79,11 @@ def session(cfg,ctx):
                 outgoing.extend(struct.pack('!H',len(packet))+packet)
             if conn in writes:
                 try:
-                    n=conn.send(outgoing)
+                    if send_chunk is None:send_chunk=bytes(outgoing[:16384])
+                    n=conn.send(send_chunk)
                     if not n:raise EOFError('TLS write closed')
                     del outgoing[:n]
+                    send_chunk=None
                 except (ssl.SSLWantReadError,ssl.SSLWantWriteError):pass
             if conn in reads or conn.pending():
                 try:chunk=conn.recv(16384)

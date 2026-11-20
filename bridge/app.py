@@ -141,6 +141,7 @@ class Bridge:
                 raise ValueError('A command is already active')
             self.log(f'Command accepted: {action}')
             self.status['action'] = action
+            self.status['result'] = 'Waiting for console pairing' if action == 'pair' else 'Sending power command'
             self.jobs.put_nowait((action, self.cfg.copy()))
 
     def read_output(self, proc):
@@ -174,7 +175,7 @@ class Bridge:
                                       'pair' if action == 'pair' else cfg['console'], 'unix', sockpath],
                                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         threading.Thread(target=self.read_output, args=(self.proc,), daemon=True).start()
-        deadline = time.monotonic() + (90 if action == 'pair' else 30)
+        deadline = time.monotonic() + (int(os.getenv('PAIR_TIMEOUT', '300')) if action == 'pair' else 30)
         try:
             while not self.connected.wait(.1):
                 if self.proc.poll() is not None:

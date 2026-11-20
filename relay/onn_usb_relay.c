@@ -105,7 +105,7 @@ struct frame {struct frame *next;size_t len,pos;unsigned char data[4100];};
 struct stream {struct usbdevfs_urb *urb;unsigned char data[4096],pending[8192];size_t used;int type;};
 static int enqueue(struct frame **head,struct frame **tail,size_t *queued,const unsigned char *p,size_t n) {
  if(n>4096||*queued+n>1048576)return -1;struct frame *f=calloc(1,sizeof *f);if(!f)return -1;
- f->data[0]=n>>8;f->data[1]=n&255;memcpy(f->data+2,p,n);f->len=n+2;
+ f->data[0]=n>>8;f->data[1]=n&255;if(n)memcpy(f->data+2,p,n);f->len=n+2;
  if(*tail)(*tail)->next=f;else *head=f;*tail=f;*queued+=f->len;return 0;
 }
 static int usb_stream_init(int fd,struct stream *s,int type,int ep) {

@@ -16,6 +16,9 @@
 static int bdaddr_was_set = 0;
 static bdaddr_t original_bdaddr;
 static char original_name[HCI_MAX_NAME_LENGTH];
+static uint8_t original_eir[240];
+static uint8_t original_eir_fec;
+static int eir_was_set = 0;
 static uint8_t original_class[3];
 static uint8_t original_scan_enable;
 static uint8_t original_iac[MAX_IAC_LAP][3];
@@ -255,12 +258,35 @@ int set_up_device_name(int dd)
     return -1;
   }
 
+  /* Modern consoles inspect the EIR name, which BlueZ otherwise leaves as
+   * the host name even after HCI Write Local Name. Keep both identities in sync. */
+  if (hci_read_ext_inquiry_response(dd, &original_eir_fec, original_eir, HCI_TIMEOUT) == 0)
+  {
+    uint8_t eir[240] = {0};
+    size_t name_len = strlen(wiimote_name);
+    eir[0] = name_len + 1;
+    eir[1] = 0x09; /* Complete local name */
+    memcpy(eir + 2, wiimote_name, name_len);
+    size_t pos = name_len + 2;
+    eir[pos++] = 3; eir[pos++] = 3; eir[pos++] = 0x24; eir[pos++] = 0x11; /* HID UUID */
+    if (hci_write_ext_inquiry_response(dd, 0, eir, HCI_TIMEOUT) == 0)
+    {
+      eir_was_set = 1;
+      printf("Nintendo name and HID service advertised in extended inquiry response\n");
+    }
+    else fprintf(stderr, "Warning: unable to update extended inquiry response\n");
+  }
   return 0;
 }
 
 int restore_device_name(int dd)
 {
   int ret;
+  if (eir_was_set)
+  {
+    hci_write_ext_inquiry_response(dd, original_eir_fec, original_eir, HCI_TIMEOUT);
+    eir_was_set = 0;
+  }
 
   ret = hci_write_local_name(dd, original_name, HCI_TIMEOUT);
   if (ret < 0)
@@ -337,7 +363,10 @@ int set_up_device_inquiry(int dd)
     return -1;
   }
 
-  ret = hci_write_current_iac_lap(dd, 1, (uint8_t *)wiimote_iac, HCI_TIMEOUT);
+  const uint8_t inquiry_codes[6] = {0x00,0x8b,0x9e,0x33,0x8b,0x9e};
+  ret = hci_write_current_iac_lap(dd, 2, (uint8_t *)inquiry_codes, HCI_TIMEOUT);
+  if (ret < 0)
+    ret = hci_write_current_iac_lap(dd, 1, (uint8_t *)wiimote_iac, HCI_TIMEOUT);
   if (ret < 0)
   {
     fprintf(stderr, "Can't write iac: %s (%d)\n", strerror(errno), errno);
@@ -534,7 +563,9 @@ int power_off_host(const bdaddr_t * host_bdaddr)
   int ret, dd;
   struct hci_conn_info_req * cr;
   
-  dd = hci_open_dev(get_selected_device_id());
+  int selected = get_selected_device_id();
+  if (selected < 0) return -1;
+  dd = hci_open_dev(selected);
   if (dd < 0)
   {
     return dd;

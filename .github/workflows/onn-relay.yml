@@ -21,11 +21,11 @@ jobs:
         run: |
           cmake -S /tmp/mbedtls -B /tmp/mbed-build \
             -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=android-24 \
+            -DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=android-28 \
             -DENABLE_TESTING=OFF -DENABLE_PROGRAMS=OFF -DCMAKE_BUILD_TYPE=MinSizeRel
           cmake --build /tmp/mbed-build --parallel 4
           mkdir -p dist
-          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang" \
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi28-clang" \
             -O2 -Wall -Wextra -I/tmp/mbedtls/include relay/onn_usb_relay.c \
             /tmp/mbed-build/library/libmbedtls.a /tmp/mbed-build/library/libmbedx509.a /tmp/mbed-build/library/libmbedcrypto.a \
             -o dist/onn-usb-relay

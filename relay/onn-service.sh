@@ -2,6 +2,8 @@
 # Installed as /data/adb/service.d/wiimote-relay.sh. No SELinux changes.
 BASE=/data/adb/wiimote-relay
 (
+  exec 9>"$BASE/supervisor.lock"
+  /data/adb/magisk/busybox flock -n 9 || exit 0
   while [ "$(getprop sys.boot_completed)" != 1 ]; do sleep 5; done
   mkdir -p "$BASE/logs"
   while true; do
