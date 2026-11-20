@@ -46,10 +46,17 @@ class Bridge:
         self.power_sent = threading.Event()
         self.paired = None
         self.client = None
-        self.status = dict(action='idle', result='No command sent', mqtt=False)
-        print('Wii bridge started; Bluetooth adapter: hci0', flush=True)
+        self.status = dict(action='idle', result='No command sent', mqtt=False, logs=[])
+        self.log('Wii bridge started; Bluetooth adapter: hci0')
         threading.Thread(target=self.worker, daemon=True).start()
         self.configure_mqtt()
+
+    def log(self, message):
+        line = time.strftime('%H:%M:%S') + ' ' + message
+        with self.lock:
+            self.status['logs'].append(line)
+            self.status['logs'] = self.status['logs'][-30:]
+        print(line, flush=True)
 
     def publish(self, suffix, payload, retain=False):
         if self.client:
@@ -132,13 +139,13 @@ class Bridge:
                 raise ValueError('Configure the console Bluetooth address first')
             if self.status['action'] != 'idle' or not self.jobs.empty():
                 raise ValueError('A command is already active')
-            print(f'Command accepted: {action}', flush=True)
+            self.log(f'Command accepted: {action}')
             self.status['action'] = action
             self.jobs.put_nowait((action, self.cfg.copy()))
 
     def read_output(self, proc):
         for line in proc.stdout:
-            print(line.rstrip(), flush=True)
+            self.log(line.rstrip())
             match = re.search(r'connected to ((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})', line)
             if match:
                 self.paired = match.group(1).upper()
@@ -162,7 +169,7 @@ class Bridge:
         self.paired = None
         sockpath = '/run/wiimote-input.sock'
         Path(sockpath).unlink(missing_ok=True)
-        print(f'Starting emulator: action={action} adapter=hci0', flush=True)
+        self.log(f'Starting emulator: action={action} adapter=hci0')
         self.proc = subprocess.Popen(['stdbuf', '-oL', './wmemulator',
                                       'pair' if action == 'pair' else cfg['console'], 'unix', sockpath],
                                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -199,7 +206,7 @@ class Bridge:
                 result = str(exc)
             with self.lock:
                 self.status.update(action='idle', result=result)
-            print(f'Command completed: {action}: {result}', flush=True)
+            self.log(f'Command completed: {action}: {result}')
             self.publish('result', json.dumps(dict(command=action, result=result)))
             self.jobs.task_done()
 
