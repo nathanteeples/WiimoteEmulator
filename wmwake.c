@@ -64,7 +64,7 @@ int main(int argc,char **argv) {
   if(state==-ECONNREFUSED){printf("WAKE_ALREADY_AWAKE\n");result=0;goto cleanup;}
   if(state<0){fprintf(stderr,"Wake HID probe failed: %s\n",strerror(-state));goto cleanup;}
   if(authenticated_acl(dd,&peer)) {
-   if(!authenticated_at){authenticated_at=seconds();printf("Authenticated ACL established; checking whether HID host is awake\n");}
+   if(!authenticated_at){authenticated_at=seconds();deadline=authenticated_at+5;printf("Authenticated ACL established; checking whether HID host is awake\n");}
    if(seconds()-authenticated_at>=5)break;
   }
  }

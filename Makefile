@@ -8,7 +8,7 @@ CFLAGS=-D SDP_SERVER
 endif
 LDBUS=`pkg-config --cflags dbus-1` -ldbus-1
 
-all: wmemulator packedtest wmmitm
+all: wmemulator packedtest wmmitm wmwake
 clean:
 	rm -f wmemulator packedtest wmmitm wmwake
 wmemulator: wmemulator.c wiimote.c input.c motion.c input_sdl.c input_socket.c wm_crypto.c wm_reports.c wm_print.c sdp.c bdaddr.c adapter.c

@@ -30,6 +30,7 @@ EXPOSE 8080
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]
 # Run link/import checks on the GitHub builder for each target architecture.
 RUN ldd ./wmemulator > /tmp/links && ! grep -q 'not found' /tmp/links \
+ && ldd ./wmwake > /tmp/links && ! grep -q 'not found' /tmp/links \
  && ldd ./bluez-4.101/dist/sbin/bluetoothd > /tmp/links && ! grep -q 'not found' /tmp/links \
  && /opt/venv/bin/python -c 'import flask; import paho.mqtt.client' \
  && ./bluez-4.101/dist/sbin/bluetoothd --version

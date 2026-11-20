@@ -179,6 +179,11 @@ class Bridge:
                 self.recent_wake.set()
             if 'POWER_OFF_SENT' in line:
                 self.power_sent.set()
+                self.last_wake_request = 0
+                try:
+                    (DATA / 'wake-state.json').unlink(missing_ok=True)
+                except OSError as exc:
+                    self.log('Unable to clear wake cooldown: ' + str(exc))
 
     def stop(self):
         proc = self.proc
