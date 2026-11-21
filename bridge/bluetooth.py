@@ -60,6 +60,22 @@ class BluetoothStack:
                 capture_output=True, timeout=2)
             marker = b'ObjectManager' if family == 'switch' else b'org.bluez.Manager'
             if result.returncode == 0 and marker in result.stdout:
+                if family == 'wii':
+                    import dbus
+                    selected = os.getenv('HCI_DEVICE', 'hci0')
+                    bus = dbus.SystemBus()
+                    try:
+                        manager = dbus.Interface(bus.get_object('org.bluez', '/'), 'org.bluez.Manager')
+                        adapter_path = str(manager.FindAdapter(selected))
+                        adapter = dbus.Interface(bus.get_object('org.bluez', adapter_path), 'org.bluez.Adapter')
+                        if not adapter.GetProperties().get('Powered'):
+                            adapter.SetProperty('Powered', dbus.Boolean(True))
+                        if not adapter.GetProperties().get('Powered'):
+                            time.sleep(.1)
+                            continue
+                    except dbus.exceptions.DBusException:
+                        time.sleep(.1)
+                        continue
                 if family == 'switch':
                     import dbus
                     selected = os.getenv('HCI_DEVICE', 'hci0')

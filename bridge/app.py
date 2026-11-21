@@ -262,7 +262,7 @@ class Bridge:
             self.cfg = validate(cfg)
             self.persist()
             self.switch.close()
-        if self.client:
+        if self.client and self.status['mqtt']:
             self.discovery()
         return ident
 
@@ -429,7 +429,7 @@ class Bridge:
                         profiles = [dict(p, address=self.paired) if p['id'] == cfg['profile']['id'] else p for p in self.cfg['consoles']]
                         self.cfg = validate({**self.cfg, 'consoles': profiles})
                         self.persist()
-                    if self.client:
+                    if self.client and self.status['mqtt']:
                         self.discovery()
             except Exception as exc:
                 result = str(exc)

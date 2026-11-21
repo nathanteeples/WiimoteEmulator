@@ -74,6 +74,7 @@ class Profiles(unittest.TestCase):
     def test_deleted_discovery_topics_are_removed(self):
         ident = self.b.profiles(dict(label='Old console', address=MAC2))
         self.b.client = Mock()
+        self.b.status['mqtt'] = True
         self.b.discovery()
         self.b.profiles(dict(operation='delete', id=ident))
         self.b.client.publish.assert_any_call(f'homeassistant/button/wiimote_bridge_{ident}_on/config', '', qos=1, retain=True)
