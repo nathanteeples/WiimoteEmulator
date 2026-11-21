@@ -31,6 +31,7 @@ async def run(action, address):
     from joycontrol.memory import FlashMemory
     from joycontrol.protocol import ControllerProtocol
     from bridge.switch_protocol import rate_limited_protocol
+    from bridge.bluetooth_events import PairingMonitor
     from joycontrol.report import InputReport
     from joycontrol.transport import L2CAP_Transport
     import joycontrol
@@ -84,6 +85,7 @@ async def run(action, address):
     if not pairing:
         state.button_state.set_button('home', True)
     sockets, transport, starter = [], None, None
+    monitor = PairingMonitor(loop, hid._adapter_name)
     loop = asyncio.get_running_loop()
 
     def channel():
@@ -161,6 +163,7 @@ async def run(action, address):
                 await button_push(state, 'home', sec=.15)
                 event('home', address=address)
     finally:
+        monitor.close()
         if starter:
             starter.cancel()
             with contextlib.suppress(asyncio.CancelledError, Exception):

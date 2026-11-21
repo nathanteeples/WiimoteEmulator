@@ -20,3 +20,14 @@ class SwitchReports(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([v for v, t in writes], [0, 1, 2, 3])
         for previous, current in zip(writes, writes[1:]):
             self.assertGreaterEqual(current[1] - previous[1], 1/15 - 1e-8)
+
+class PairingDiagnostics(unittest.TestCase):
+    def test_authentication_failures_include_peer_and_status(self):
+        from bridge.bluetooth_events import describe
+        packet = bytes.fromhex('04 36 07 05 89 AD EE B5 F6 E0')
+        self.assertEqual(describe(packet), 'Bluetooth secure pairing FAILED: E0:F6:B5:EE:AD:89, status 0x05')
+
+    def test_key_notifications_and_malformed_packets_are_ignored(self):
+        from bridge.bluetooth_events import describe
+        self.assertIsNone(describe(bytes([4, 0x18, 23]) + b'private key data'))
+        self.assertIsNone(describe(bytes.fromhex('04 36 07 05')))
