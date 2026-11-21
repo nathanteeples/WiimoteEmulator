@@ -163,3 +163,42 @@ wake is not repeated for 60 seconds, including across a container restart, to
 avoid toggling a console that is still booting. Power off retains the existing
 connected-controller shutdown path. Power confirmation is based on Bluetooth
 service availability rather than direct measurement of the front-panel LED.
+
+### Multiple consoles and Nintendo Switch
+
+Save a separate labeled profile for each Wii, Wii U, or Nintendo Switch in the web
+interface, then use **Pair console** on that profile. Pairing learns the address
+without replacing another profile. For Wii U use **Wii Remote/Other Controllers →
+Pair**; for Switch open **Controllers → Change Grip/Order**. Existing single-console
+settings migrate to a Wii U profile, preserving the address, MQTT password, and bonds.
+Keep the ONN relay's controller address stable: each console bonds to that identity.
+
+Each profile shows its stable MQTT ID. Publish a non-retained payload to:
+
+```
+wiimote/bridge/consoles/<id>/command
+```
+
+Wii / Wii U accept `on`, `off`, and `pair`. Switch accepts `home`, `on`, `wake`, and
+`pair` (`on` and `wake` send HOME). Subscribe to the corresponding `/result` topic
+for the result. Home Assistant discovers separate buttons named for each console;
+renaming keeps their IDs stable and deleting a profile removes its discovery entries.
+The original `wiimote/bridge/command` and original Home Assistant buttons still target
+the selected default console. Commands are serialized and retained commands ignored.
+
+Switch emulation uses [joycontrol](https://github.com/mart1nro/joycontrol), pinned to
+`18a09da1a04306534ff9e1df8a1a69c0192a3244`, distributed under GPL-3.0 with its license
+in `/usr/share/doc/joycontrol/LICENSE`. It emulates a Pro Controller on the configured
+adapter, including during reconnection. Switch power off and Switch 2 compatibility
+are not implemented. HOME is asserted during reconnect and sent again after the
+controller handshake; a successful result confirms HID delivery, **not physical wake**.
+Upstream [wake support remains unresolved](https://github.com/mart1nro/joycontrol/issues/59),
+so sleep wake must be verified with the actual Switch and firmware.
+
+For speed, the selected BlueZ daemon stays running between commands. Switch HOME
+commands reuse their active HID session, avoiding another connection and handshake.
+Changing from Wii to Switch replaces only the container's private Bluetooth daemon;
+the persistent ONN USB relay stays connected. BlueZ 4 Wii bonds and BlueZ 5 Switch
+bonds are stored separately under `/data/bluetooth` and `/data/bluez5`. The adapter is
+shared, so only one command/session can own it at a time. Wii wake intentionally
+keeps its five-second authenticated-link check to avoid toggling an awake console off.

@@ -67,7 +67,7 @@ jobs:
             if curl -fsS -u ci:ci-test-password http://127.0.0.1:8080/api/status; then break; fi
             sleep 1
           done
-          curl -fsS -u ci:ci-test-password http://127.0.0.1:8080/ | grep -q 'Wii power bridge'
+          curl -fsS -u ci:ci-test-password http://127.0.0.1:8080/ | grep -q 'Console power bridge'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/config)" = 401
       - name: Test browser command buttons
         if: matrix.arch == 'amd64'

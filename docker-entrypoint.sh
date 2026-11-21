@@ -20,15 +20,14 @@ while [ ! -S /run/dbus/system_bus_socket ]; do
   [ "$i" -lt 50 ] || exit 1
   sleep 0.1
 done
-/opt/wiimote/bluez-4.101/dist/sbin/bluetoothd -n &
-bluetooth=$!
+export MANAGE_BLUETOOTH=1
 /opt/venv/bin/gunicorn --workers 1 --threads 4 --bind "0.0.0.0:$WEB_PORT" --access-logfile - bridge.wsgi:app &
 web=$!
 cleanup() {
-  kill "$web" "$bluetooth" "$bus" 2>/dev/null || true
+  kill "$web" "$bus" 2>/dev/null || true
   wait || true
 }
 trap cleanup EXIT
 trap 'exit 0' TERM INT
-while kill -0 "$web" 2>/dev/null && kill -0 "$bluetooth" 2>/dev/null && kill -0 "$bus" 2>/dev/null; do sleep 1; done
+while kill -0 "$web" 2>/dev/null && kill -0 "$bus" 2>/dev/null; do sleep 1; done
 exit 1
