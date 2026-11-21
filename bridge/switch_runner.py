@@ -19,6 +19,13 @@ def event(name, **fields):
     print('BRIDGE_EVENT ' + json.dumps(dict(event=name, **fields)), flush=True)
 
 
+async def wait_stage(awaitable, timeout, description):
+    try:
+        return await asyncio.wait_for(awaitable, timeout)
+    except asyncio.TimeoutError as exc:
+        raise RuntimeError('Switch timed out ' + description) from exc
+
+
 async def run(action, address):
     # Import under the running loop: upstream utils captures its default loop.
     import dbus
@@ -146,8 +153,8 @@ async def run(action, address):
             # Upstream reconnect does not bind; explicitly avoid the host Intel radio.
             ctl.bind((hid.address, 0))
             itr.bind((hid.address, 0))
-            await asyncio.wait_for(loop.sock_connect(ctl, (address, 17)), 15)
-            await asyncio.wait_for(loop.sock_connect(itr, (address, 19)), 15)
+            await wait_stage(loop.sock_connect(ctl, (address, 17)), 15, 'connecting the Bluetooth HID control channel; check the console is awake and paired')
+            await wait_stage(loop.sock_connect(itr, (address, 19)), 15, 'connecting the Bluetooth HID interrupt channel')
         transport = L2CAP_Transport(loop, protocol, itr, ctl, 50)
         protocol.connection_made(transport)
 
@@ -160,12 +167,12 @@ async def run(action, address):
                 await asyncio.sleep(1)
 
         starter = asyncio.create_task(initial_reports())
-        await asyncio.wait_for(protocol.wait_for_output_report(), 12)
+        await wait_stage(protocol.wait_for_output_report(), 12, 'waiting for the first controller inquiry after HID connected')
         starter.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await starter
         state.button_state.set_button('home', False)
-        await asyncio.wait_for(state.connect(), 15)
+        await wait_stage(state.connect(), 15, 'waiting for controller/player assignment after HID connected')
         if pairing:
             event('paired', address=address)
         else:

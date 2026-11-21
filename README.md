@@ -202,3 +202,13 @@ the persistent ONN USB relay stays connected. BlueZ 4 Wii bonds and BlueZ 5 Swit
 bonds are stored separately under `/data/bluetooth` and `/data/bluez5`. The adapter is
 shared, so only one command/session can own it at a time. Wii wake intentionally
 keeps its five-second authenticated-link check to avoid toggling an awake console off.
+
+Switch compatibility notes: modern Switch firmware checks the controller class and
+rejects excessive report rates in pairing/HOME menus. The Switch daemon disables
+BlueZ's `hostname` plugin (which otherwise classifies the Unraid server as a desktop),
+uses its own configuration, and sets Gamepad through MGMT before HCI. This keeps
+BlueZ's cached class and radio advertisement consistent. Startup reports use 1 Hz;
+controller reports are limited to 15 Hz. See the upstream
+[firmware compatibility discussion](https://github.com/mart1nro/joycontrol/issues/104).
+The pairing log shows connection attempts and authentication results using a
+read-only HCI event filter that excludes link-key notifications.
