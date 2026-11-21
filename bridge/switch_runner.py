@@ -29,7 +29,8 @@ async def run(action, address):
     from joycontrol.controller_state import button_push
     from joycontrol.device import HidDevice
     from joycontrol.memory import FlashMemory
-    from joycontrol.protocol import controller_protocol_factory
+    from joycontrol.protocol import ControllerProtocol
+    from bridge.switch_protocol import rate_limited_protocol
     from joycontrol.report import InputReport
     from joycontrol.transport import L2CAP_Transport
     import joycontrol
@@ -78,7 +79,7 @@ async def run(action, address):
     glib = GLib.MainLoop()
     glib_thread = threading.Thread(target=glib.run, daemon=True)
     glib_thread.start()
-    protocol = controller_protocol_factory(Controller.PRO_CONTROLLER, spi_flash=FlashMemory())()
+    protocol = rate_limited_protocol(ControllerProtocol)(Controller.PRO_CONTROLLER, spi_flash=FlashMemory())
     state = protocol.get_controller_state()
     if not pairing:
         state.button_state.set_button('home', True)
@@ -95,7 +96,6 @@ async def run(action, address):
     try:
         hid.powered(True)
         await hid.set_name(protocol.controller.device_name())
-        await hid.set_class()
         record = Path(joycontrol.__file__).parent / 'profile' / 'sdp_record_hid.xml'
         HidDevice.register_sdp_record(str(record))
         if pairing:
@@ -106,17 +106,23 @@ async def run(action, address):
             interrupt.listen(1)
             hid.pairable(True)
             hid.discoverable(True)
+            # Discoverability and SDP changes make BlueZ rewrite device class.
+            await hid.set_class()
+            print('Switch advertisement ready: Gamepad 0x002508 on ' + hid._adapter_name, flush=True)
             print('Open Switch Controllers → Change Grip/Order to pair', flush=True)
             ctl, ctl_peer = await loop.sock_accept(control)
             sockets.append(ctl)
+            print('Switch HID control connected: ' + ctl_peer[0], flush=True)
             itr, itr_peer = await loop.sock_accept(interrupt)
             sockets.append(itr)
+            print('Switch HID interrupt connected: ' + itr_peer[0], flush=True)
             if ctl_peer[0] != itr_peer[0]:
                 raise RuntimeError('HID channels came from different consoles; retry pairing')
             address = ctl_peer[0].upper()
             hid.discoverable(False)
             hid.pairable(False)
         else:
+            await hid.set_class()
             ctl, itr = channel(), channel()
             # Upstream reconnect does not bind; explicitly avoid the host Intel radio.
             ctl.bind((hid.address, 0))
@@ -128,12 +134,11 @@ async def run(action, address):
 
         async def initial_reports():
             report = InputReport()
-            report.set_input_report_id(0x30)
-            report.set_misc()
-            report.set_vibrator_input()
+            # Match joycontrol's empty startup report; v12+ firmware expects
+            # one per second until it begins its controller inquiry.
             for _ in range(20):
                 await protocol.write(report)
-                await asyncio.sleep(.1)
+                await asyncio.sleep(1)
 
         starter = asyncio.create_task(initial_reports())
         await asyncio.wait_for(protocol.wait_for_output_report(), 12)

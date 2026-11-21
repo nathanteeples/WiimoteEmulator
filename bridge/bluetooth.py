@@ -40,7 +40,8 @@ class BluetoothStack:
         daemon = '/usr/libexec/bluetooth/bluetoothd' if family == 'switch' else '/opt/wiimote/bluez-4.101/dist/sbin/bluetoothd'
         args = [daemon, '-n']
         if family == 'switch':
-            args += ['-P', 'input']
+            args += ['-f', '/opt/wiimote/bridge/bluez-switch.conf', '-P',
+                     'input,sap,avrcp,a2dp,network,vcp,mcp,bap']
         self.log('Starting Bluetooth stack: ' + family)
         self.proc = subprocess.Popen(args)
         deadline = time.monotonic() + 10
