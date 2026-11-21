@@ -9,6 +9,14 @@ public class BluetoothProbe {
     public static void main(String[] args) throws Exception {
         Looper.prepareMainLooper();
         Class<?> activityThread = Class.forName("android.app.ActivityThread");
+        try {
+            activityThread.getMethod("initializeMainlineModules").invoke(null);
+        } catch (NoSuchMethodException e) {
+            Class<?> serviceManager = Class.forName("android.os.BluetoothServiceManager");
+            Class.forName("android.bluetooth.BluetoothFrameworkInitializer")
+                .getMethod("setBluetoothServiceManager", serviceManager)
+                .invoke(null, serviceManager.getConstructor().newInstance());
+        }
         Object thread = activityThread.getMethod("systemMain").invoke(null);
         Context context = (Context) activityThread.getMethod("getSystemContext").invoke(thread);
         BluetoothManager manager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
