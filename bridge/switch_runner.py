@@ -10,6 +10,7 @@ import logging
 import os
 from pathlib import Path
 import socket
+import signal
 import sys
 import threading
 
@@ -33,6 +34,9 @@ async def run(action, address):
     from joycontrol.transport import L2CAP_Transport
     import joycontrol
 
+    loop = asyncio.get_running_loop()
+    task = asyncio.current_task()
+    loop.add_signal_handler(signal.SIGTERM, task.cancel)
     DBusGMainLoop(set_as_default=True)
     bus = dbus.SystemBus()
     pairing = action == 'pair'
@@ -48,6 +52,8 @@ async def run(action, address):
             pass
 
         def check(self, device):
+            if not str(device).startswith('/org/bluez/' + hid._adapter_name + '/dev_'):
+                raise dbus.exceptions.DBusException('Unexpected adapter', name='org.bluez.Error.Rejected')
             peer = str(device).rsplit('/dev_', 1)[-1].replace('_', ':').upper()
             if not pairing and peer != expected:
                 raise dbus.exceptions.DBusException('Unexpected console', name='org.bluez.Error.Rejected')
@@ -64,6 +70,7 @@ async def run(action, address):
         def RequestAuthorization(self, device):
             self.check(device)
 
+    hid = HidDevice(device_id=os.getenv('HCI_DEVICE', 'hci0'))
     agent = Agent(bus, '/bridge/agent')
     manager = dbus.Interface(bus.get_object('org.bluez', '/org/bluez'), 'org.bluez.AgentManager1')
     manager.RegisterAgent('/bridge/agent', 'NoInputNoOutput')
@@ -71,7 +78,6 @@ async def run(action, address):
     glib = GLib.MainLoop()
     glib_thread = threading.Thread(target=glib.run, daemon=True)
     glib_thread.start()
-    hid = HidDevice(device_id=os.getenv('HCI_DEVICE', 'hci0'))
     protocol = controller_protocol_factory(Controller.PRO_CONTROLLER, spi_flash=FlashMemory())()
     state = protocol.get_controller_state()
     if not pairing:
@@ -171,6 +177,8 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     try:
         asyncio.run(run(sys.argv[1], sys.argv[2]))
+    except asyncio.CancelledError:
+        pass
     except Exception as exc:
         event('error', message=str(exc))
         raise SystemExit(1)

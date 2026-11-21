@@ -10,7 +10,7 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/nathanteeples/WiimoteEmulator/issues</Support>
   <Project>https://github.com/nathanteeples/WiimoteEmulator</Project>
-  <Overview>Wii Bluetooth power control with a configuration UI and Home Assistant MQTT discovery. Uses the adapter selected by HCI_DEVICE, including a remote adapter supplied by the ONN relay; stop any host Bluetooth service before starting. Pair using the Wii SYNC button and the web UI, then configure your MQTT broker. Command results do not measure actual console power state. Set a strong WEB_TOKEN before starting. Uses host port 8087; update WEB_PORT and the WebUI link together if changed.</Overview>
+  <Overview>Labeled Wii, Wii U and Nintendo Switch profiles with per-console MQTT controls and Home Assistant discovery. Switch uses joycontrol HOME commands; physical sleep-wake requires console testing. Uses the adapter selected by HCI_DEVICE, including a remote adapter supplied by the ONN relay; stop any host Bluetooth service before starting. Pair using the Wii SYNC button and the web UI, then configure your MQTT broker. Command results do not measure actual console power state. Set a strong WEB_TOKEN before starting. Uses host port 8087; update WEB_PORT and the WebUI link together if changed.</Overview>
   <Category>HomeAutomation:</Category>
   <WebUI>http://[IP]:8087</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/nathanteeples/WiimoteEmulator/master/unraid/my-Wii-Power-Bridge.xml</TemplateURL>
@@ -21,5 +21,5 @@
   <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/wiimote-power-bridge" Mode="rw" Description="Persistent pairing keys and configuration, including the MQTT password." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/wiimote-power-bridge</Config>
   <Config Name="Web UI password" Target="WEB_TOKEN" Default="" Mode="" Description="Required: enter a strong password. Sign in to the web UI with any username and this password." Type="Variable" Display="always" Required="true" Mask="true" />
   <Config Name="Web UI port" Target="WEB_PORT" Default="8087" Mode="" Description="Host network listening port. Update the template WebUI link if changed." Type="Variable" Display="always" Required="true" Mask="false">8087</Config>
-  <Config Name="Bluetooth adapter" Target="HCI_DEVICE" Default="hci0" Mode="" Description="Adapter to use exclusively. NTnet UB400 is currently hci1; built-in Intel is hci0. An adapter MAC address is also accepted. Missing adapters fail without falling back." Type="Variable" Display="always" Required="true" Mask="false">hci1</Config>
+  <Config Name="Bluetooth adapter" Target="HCI_DEVICE" Default="hci0" Mode="" Description="Adapter to use exclusively. NTnet UB400 is currently hci1; built-in Intel is hci0. An adapter MAC address is also accepted. Wii and Switch share this radio and use separate persistent bond stores. Missing adapters fail without falling back." Type="Variable" Display="always" Required="true" Mask="false">hci1</Config>
 </Container>

@@ -52,10 +52,24 @@ class BluetoothStack:
                 capture_output=True, timeout=2)
             marker = b'ObjectManager' if family == 'switch' else b'org.bluez.Manager'
             if result.returncode == 0 and marker in result.stdout:
-                self.family = family
                 if family == 'switch':
-                    adapter = os.getenv('HCI_DEVICE', 'hci0')
-                    subprocess.run(['hciconfig', adapter, 'sspmode', '1'], capture_output=True, timeout=3, check=True)
+                    import dbus
+                    selected = os.getenv('HCI_DEVICE', 'hci0')
+                    bus = dbus.SystemBus()
+                    objects = dbus.Interface(bus.get_object('org.bluez', '/'),
+                        'org.freedesktop.DBus.ObjectManager').GetManagedObjects()
+                    adapter = next((str(path) for path, interfaces in objects.items()
+                        if 'org.bluez.Adapter1' in interfaces and
+                        (str(path).rsplit('/', 1)[-1] == selected or
+                         str(interfaces['org.bluez.Adapter1']['Address']).upper() == selected.upper())), None)
+                    if adapter is None:
+                        self.close()
+                        raise RuntimeError('Configured Bluetooth adapter is unavailable: ' + selected)
+                    props = dbus.Interface(bus.get_object('org.bluez', adapter), 'org.freedesktop.DBus.Properties')
+                    props.Set('org.bluez.Adapter1', 'Powered', dbus.Boolean(True))
+                    subprocess.run(['hciconfig', adapter.rsplit('/', 1)[-1], 'sspmode', '1'],
+                                   capture_output=True, timeout=3, check=True)
+                self.family = family
                 return
             time.sleep(.1)
         self.close()
@@ -75,6 +89,8 @@ class SwitchSession:
         with self.lock:
             if self.proc:
                 if self.proc.poll() is None:
+                    if self.proc.stdin:
+                        self.proc.stdin.close()
                     self.proc.terminate()
                     try:
                         self.proc.wait(timeout=2)
