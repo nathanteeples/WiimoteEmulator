@@ -47,6 +47,14 @@ class BluetoothStack:
         while time.monotonic() < deadline:
             if self.proc.poll() is not None:
                 raise RuntimeError('Bluetooth daemon exited; check adapter and logs')
+            # Query the bus itself first: addressing org.bluez before our daemon
+            # owns it can auto-start Debian's daemon and steal the Wii stack name.
+            owner = subprocess.run(['dbus-send', '--system', '--print-reply', '--reply-timeout=500',
+                '--dest=org.freedesktop.DBus', '/org/freedesktop/DBus',
+                'org.freedesktop.DBus.GetNameOwner', 'string:org.bluez'], capture_output=True, timeout=2)
+            if owner.returncode:
+                time.sleep(.1)
+                continue
             result = subprocess.run(['dbus-send', '--system', '--print-reply', '--reply-timeout=500',
                 '--dest=org.bluez', '/', 'org.freedesktop.DBus.Introspectable.Introspect'],
                 capture_output=True, timeout=2)
@@ -90,7 +98,10 @@ class SwitchSession:
             if self.proc:
                 if self.proc.poll() is None:
                     if self.proc.stdin:
-                        self.proc.stdin.close()
+                        try:
+                            self.proc.stdin.close()
+                        except OSError:
+                            pass
                     self.proc.terminate()
                     try:
                         self.proc.wait(timeout=2)
