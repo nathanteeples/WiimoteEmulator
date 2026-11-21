@@ -95,6 +95,23 @@ async def run(action, address):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return sock
 
+    async def gamepad_class():
+        # HCI-only writes leave the kernel/BlueZ class cached as "Computer".
+        # Update MGMT first so subsequent SDP/EIR updates preserve Gamepad.
+        process = await asyncio.create_subprocess_exec('btmgmt', '--index', hid._adapter_name,
+            'class', '5', '8', stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        output, error = await process.communicate()
+        if process.returncode:
+            raise RuntimeError('Unable to set Bluetooth gamepad class: ' + error.decode().strip())
+        await hid.set_class()
+        for _ in range(20):
+            cached = int(hid.properties.Get('org.bluez.Adapter1', 'Class'))
+            if cached & 0x1ffc == 0x0508:
+                print('Gamepad identity verified in BlueZ and HCI', flush=True)
+                return
+            await asyncio.sleep(.05)
+        raise RuntimeError('BlueZ is overriding the Gamepad class; pairing stopped')
+
     try:
         hid.powered(True)
         await hid.set_name(protocol.controller.device_name())
@@ -109,7 +126,7 @@ async def run(action, address):
             hid.pairable(True)
             hid.discoverable(True)
             # Discoverability and SDP changes make BlueZ rewrite device class.
-            await hid.set_class()
+            await gamepad_class()
             print('Switch advertisement ready: Gamepad 0x002508 on ' + hid._adapter_name, flush=True)
             print('Open Switch Controllers → Change Grip/Order to pair', flush=True)
             ctl, ctl_peer = await loop.sock_accept(control)
@@ -124,7 +141,7 @@ async def run(action, address):
             hid.discoverable(False)
             hid.pairable(False)
         else:
-            await hid.set_class()
+            await gamepad_class()
             ctl, itr = channel(), channel()
             # Upstream reconnect does not bind; explicitly avoid the host Intel radio.
             ctl.bind((hid.address, 0))
