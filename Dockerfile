@@ -32,6 +32,7 @@ RUN python3 -m venv --system-site-packages /opt/venv \
  && tar -xOf /tmp/joycontrol.tar.gz joycontrol-18a09da1a04306534ff9e1df8a1a69c0192a3244/LICENSE > /usr/share/doc/joycontrol/LICENSE \
  && rm /tmp/joycontrol.tar.gz
 COPY bridge ./bridge
+COPY bridge/bluez-dbus.conf /etc/dbus-1/system.d/wiimote-bridge.conf
 COPY docker-entrypoint.sh /usr/local/bin/
 VOLUME ["/data"]
 EXPOSE 8080

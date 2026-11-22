@@ -69,6 +69,11 @@ jobs:
           done
           curl -fsS -u ci:ci-test-password http://127.0.0.1:8080/ | grep -q 'Console power bridge'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/config)" = 401
+          docker exec web-smoke dbus-uuidgen --ensure
+          docker exec web-smoke mkdir -p /run/dbus
+          docker exec web-smoke dbus-daemon --system --fork --nopidfile
+          docker cp .github/tests/dbus_policy.py web-smoke:/tmp/dbus_policy.py
+          docker exec web-smoke /opt/venv/bin/python /tmp/dbus_policy.py
       - name: Test browser command buttons
         if: matrix.arch == 'amd64'
         run: |
