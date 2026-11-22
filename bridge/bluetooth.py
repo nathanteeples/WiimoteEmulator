@@ -181,6 +181,9 @@ class SwitchSession:
                 return self.address
             if event['event'] in ('error', 'closed'):
                 self.close()
-                raise RuntimeError(event.get('message', 'Switch connection closed; check Bluetooth logs'))
+                if warm:
+                    self.log('Switch connection expired; reconnecting once')
+                    return self.command(action, address)
+                raise RuntimeError(event.get('message') or 'Switch connection closed; check Bluetooth logs')
         self.close()
         raise RuntimeError('Switch timed out. Pair in Controllers → Change Grip/Order. HOME wake requires an authenticated connection; no wake confirmed.')

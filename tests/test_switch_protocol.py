@@ -31,3 +31,30 @@ class PairingDiagnostics(unittest.TestCase):
         from bridge.bluetooth_events import describe
         self.assertIsNone(describe(bytes([4, 0x18, 23]) + b'private key data'))
         self.assertIsNone(describe(bytes.fromhex('04 36 07 05')))
+
+
+class WarmSwitchSession(unittest.TestCase):
+    def test_live_connection_sends_home_without_spawning(self):
+        from unittest.mock import Mock
+        from bridge.bluetooth import SwitchSession
+        session = SwitchSession(Mock())
+        session.proc = Mock(); session.proc.poll.return_value = None
+        session.address = '02:11:22:33:44:55'
+        session.events.put({'event': 'home', 'address': session.address})
+        with patch('bridge.bluetooth.subprocess.Popen') as spawn:
+            self.assertEqual(session.command('on', session.address), session.address)
+            spawn.assert_not_called()
+        session.proc.stdin.write.assert_called_once_with('home\n')
+
+    def test_expired_warm_connection_reconnects_once(self):
+        from unittest.mock import Mock
+        from bridge.bluetooth import SwitchSession
+        session = SwitchSession(Mock())
+        session.proc = Mock(); session.proc.poll.return_value = None
+        session.address = address = '02:11:22:33:44:55'
+        session.events.put({'event': 'error', 'message': 'Disconnected'})
+        with patch('bridge.bluetooth.subprocess.Popen') as spawn, patch('bridge.bluetooth.threading.Thread') as reader:
+            reader.return_value.start.side_effect = lambda: session.events.put({'event': 'home', 'address': address})
+            self.assertEqual(session.command('on', address), address)
+            spawn.assert_called_once()
+            self.assertIn(address, spawn.call_args.args[0])
