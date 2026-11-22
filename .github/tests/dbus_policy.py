@@ -1,5 +1,8 @@
 """Exercise actual private-system-bus callback policy in the packaged image."""
 import threading
+import sys
+
+sys.path.insert(0, '/opt/wiimote')
 import dbus
 import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
@@ -50,5 +53,6 @@ finally:
     thread.join(timeout=2)
     callbacks.remove_from_connection()
     adapter.remove_from_connection()
+    del name
     daemon.close()
     client.close()
