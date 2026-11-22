@@ -74,6 +74,26 @@ jobs:
           docker exec web-smoke dbus-daemon --system --fork --nopidfile
           docker cp .github/tests/dbus_policy.py web-smoke:/tmp/dbus_policy.py
           docker exec web-smoke /opt/venv/bin/python /tmp/dbus_policy.py
+      - name: Test packaged service restart
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          docker run -d --name restart-smoke -p 127.0.0.1:8080:8080 \
+            -e WEB_TOKEN=ci-test-password -e HCI_DEVICE=hci999 \
+            "$IMAGE:build-$GITHUB_SHA-$ARCH"
+          trap 'docker logs restart-smoke; docker rm -f restart-smoke' EXIT
+          wait_for_web() {
+            for attempt in $(seq 1 30); do
+              if curl -fsS -u ci:ci-test-password http://127.0.0.1:8080/api/status; then return 0; fi
+              sleep 1
+            done
+            return 1
+          }
+          wait_for_web
+          docker restart restart-smoke
+          wait_for_web
+          docker exec restart-smoke dbus-send --system --print-reply \
+            --dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.GetId
       - name: Test browser command buttons
         if: matrix.arch == 'amd64'
         run: |

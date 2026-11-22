@@ -12,7 +12,9 @@ rm -rf /var/lib/bluetooth
 ln -s /data/bluetooth /var/lib/bluetooth
 dbus-uuidgen --ensure
 # Private system bus: never mount the host D-Bus socket into this container.
-dbus-daemon --system --nofork &
+# Both paths belong to this private bus and can survive a Docker restart.
+rm -f /run/dbus/pid /run/dbus/system_bus_socket
+dbus-daemon --system --nofork --nopidfile &
 bus=$!
 i=0
 while [ ! -S /run/dbus/system_bus_socket ]; do

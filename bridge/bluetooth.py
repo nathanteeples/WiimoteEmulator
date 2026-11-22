@@ -81,17 +81,28 @@ class BluetoothStack:
                     import dbus
                     selected = os.getenv('HCI_DEVICE', 'hci0')
                     bus = dbus.SystemBus()
-                    objects = dbus.Interface(bus.get_object('org.bluez', '/'),
-                        'org.freedesktop.DBus.ObjectManager').GetManagedObjects()
-                    adapter = next((str(path) for path, interfaces in objects.items()
-                        if 'org.bluez.Adapter1' in interfaces and
-                        (str(path).rsplit('/', 1)[-1] == selected or
-                         str(interfaces['org.bluez.Adapter1']['Address']).upper() == selected.upper())), None)
-                    if adapter is None:
-                        self.close()
-                        raise RuntimeError('Configured Bluetooth adapter is unavailable: ' + selected)
-                    props = dbus.Interface(bus.get_object('org.bluez', adapter), 'org.freedesktop.DBus.Properties')
-                    props.Set('org.bluez.Adapter1', 'Powered', dbus.Boolean(True))
+                    try:
+                        objects = dbus.Interface(bus.get_object('org.bluez', '/'),
+                            'org.freedesktop.DBus.ObjectManager').GetManagedObjects()
+                        adapter = next((str(path) for path, interfaces in objects.items()
+                            if 'org.bluez.Adapter1' in interfaces and
+                            (str(path).rsplit('/', 1)[-1] == selected or
+                             str(interfaces['org.bluez.Adapter1']['Address']).upper() == selected.upper())), None)
+                        if adapter is None:
+                            time.sleep(.1)
+                            continue
+                        props = dbus.Interface(bus.get_object('org.bluez', adapter), 'org.freedesktop.DBus.Properties')
+                        if not props.Get('org.bluez.Adapter1', 'Powered'):
+                            props.Set('org.bluez.Adapter1', 'Powered', dbus.Boolean(True))
+                        if not props.Get('org.bluez.Adapter1', 'Powered'):
+                            time.sleep(.1)
+                            continue
+                    except dbus.exceptions.DBusException as exc:
+                        if exc.get_dbus_name() not in ('org.bluez.Error.Busy', 'org.bluez.Error.InProgress',
+                                'org.bluez.Error.NotReady', 'org.freedesktop.DBus.Error.UnknownObject'):
+                            raise
+                        time.sleep(.1)
+                        continue
                     subprocess.run(['hciconfig', adapter.rsplit('/', 1)[-1], 'sspmode', '1'],
                                    capture_output=True, timeout=3, check=True)
                 self.family = family
