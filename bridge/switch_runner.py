@@ -39,6 +39,7 @@ async def run(action, address):
     from joycontrol.protocol import ControllerProtocol
     from bridge.switch_protocol import rate_limited_protocol
     from bridge.bluetooth_events import PairingMonitor
+    from bridge.switch_dbus import set_adapter_property
     from joycontrol.report import InputReport
     from joycontrol.transport import L2CAP_Transport
     import joycontrol
@@ -120,8 +121,8 @@ async def run(action, address):
         raise RuntimeError('BlueZ is overriding the Gamepad class; pairing stopped')
 
     try:
-        hid.powered(True)
-        await hid.set_name(protocol.controller.device_name())
+        set_adapter_property(hid.properties, 'Powered', True)
+        set_adapter_property(hid.properties, 'Alias', protocol.controller.device_name())
         record = Path(joycontrol.__file__).parent / 'profile' / 'sdp_record_hid.xml'
         HidDevice.register_sdp_record(str(record))
         if pairing:
@@ -130,8 +131,8 @@ async def run(action, address):
             interrupt.bind((hid.address, 19))
             control.listen(1)
             interrupt.listen(1)
-            hid.pairable(True)
-            hid.discoverable(True)
+            set_adapter_property(hid.properties, 'Pairable', True)
+            set_adapter_property(hid.properties, 'Discoverable', True)
             # Discoverability and SDP changes make BlueZ rewrite device class.
             await gamepad_class()
             print('Switch advertisement ready: Gamepad 0x002508 on ' + hid._adapter_name, flush=True)
@@ -145,8 +146,8 @@ async def run(action, address):
             if ctl_peer[0] != itr_peer[0]:
                 raise RuntimeError('HID channels came from different consoles; retry pairing')
             address = ctl_peer[0].upper()
-            hid.discoverable(False)
-            hid.pairable(False)
+            set_adapter_property(hid.properties, 'Discoverable', False)
+            set_adapter_property(hid.properties, 'Pairable', False)
         else:
             await gamepad_class()
             ctl, itr = channel(), channel()
@@ -198,8 +199,8 @@ async def run(action, address):
         for sock in sockets:
             sock.close()
         with contextlib.suppress(Exception):
-            hid.discoverable(False)
-            hid.pairable(False)
+            set_adapter_property(hid.properties, 'Discoverable', False)
+            set_adapter_property(hid.properties, 'Pairable', False)
             manager.UnregisterAgent('/bridge/agent')
         agent.remove_from_connection()
         glib.quit()

@@ -70,7 +70,7 @@ class BluetoothStack:
                         adapter_path = str(manager.FindAdapter(selected))
                         adapter = dbus.Interface(bus.get_object('org.bluez', adapter_path), 'org.bluez.Adapter')
                         if not adapter.GetProperties().get('Powered'):
-                            adapter.SetProperty('Powered', dbus.Boolean(True))
+                            adapter.SetProperty('Powered', dbus.Boolean(True, variant_level=1), signature='sv')
                         if not adapter.GetProperties().get('Powered'):
                             time.sleep(.1)
                             continue
@@ -93,7 +93,7 @@ class BluetoothStack:
                             continue
                         props = dbus.Interface(bus.get_object('org.bluez', adapter), 'org.freedesktop.DBus.Properties')
                         if not props.Get('org.bluez.Adapter1', 'Powered'):
-                            props.Set('org.bluez.Adapter1', 'Powered', dbus.Boolean(True))
+                            props.Set('org.bluez.Adapter1', 'Powered', dbus.Boolean(True, variant_level=1), signature='ssv')
                         if not props.Get('org.bluez.Adapter1', 'Powered'):
                             time.sleep(.1)
                             continue
