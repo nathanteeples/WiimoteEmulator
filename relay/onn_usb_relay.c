@@ -171,7 +171,7 @@ done:
  usb_close(usb);free(ev.urb);free(acl.urb);while(head){struct frame *f=head;head=f->next;free(f);}return result;
 }
 int main(int argc,char **argv) {
- const char *dir=argc>1?argv[1]:"/data/adb/wiimote-relay";int port=argc>2?atoi(argv[2]):18765;const char *address=argc>3?argv[3]:"00:1E:35:DA:71:16";
+ const char *dir=argc>1?argv[1]:"/data/adb/wiimote-relay";int port=argc>2?atoi(argv[2]):18765;const char *address=argc>3?argv[3]:"94:58:CB:DA:71:16";
  if(port<1||port>65535)return 2;unsigned int a[6];if(sscanf(address,"%x:%x:%x:%x:%x:%x",a,a+1,a+2,a+3,a+4,a+5)!=6)return 2;
  unsigned char target[6];for(int i=0;i<6;i++){if(a[i]>255)return 2;target[5-i]=a[i];}
  char p[600];snprintf(p,sizeof p,"%s/service.lock",dir);int lock=open(p,O_CREAT|O_RDWR,0600);if(lock<0||flock(lock,LOCK_EX|LOCK_NB)<0)return 3;

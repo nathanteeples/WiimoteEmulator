@@ -24,8 +24,8 @@ class SwitchReports(unittest.IsolatedAsyncioTestCase):
 class PairingDiagnostics(unittest.TestCase):
     def test_authentication_failures_include_peer_and_status(self):
         from bridge.bluetooth_events import describe
-        packet = bytes.fromhex('04 36 07 05 89 AD EE B5 F6 E0')
-        self.assertEqual(describe(packet), 'Bluetooth secure pairing FAILED: E0:F6:B5:EE:AD:89, status 0x05')
+        packet = bytes.fromhex('04 36 07 05 55 44 33 22 11 02')
+        self.assertEqual(describe(packet), 'Bluetooth secure pairing FAILED: 02:11:22:33:44:55, status 0x05')
 
     def test_key_notifications_and_malformed_packets_are_ignored(self):
         from bridge.bluetooth_events import describe

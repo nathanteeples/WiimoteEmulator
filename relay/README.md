@@ -56,7 +56,7 @@ Example client config:
   "host": "192.168.1.50",
   "port": 18765,
   "adapter": "hci1",
-  "controller_address": "00:1E:35:DA:71:16"
+  "controller_address": "94:58:CB:DA:71:16"
 }
 ```
 
@@ -92,3 +92,18 @@ resume. Before unplugging a test setup, stop any emulator command cleanly.
 For complete removal, stop both services, remove only the marked relay startup
 block from `/boot/config/go`, and remove the dedicated Magisk service script.
 Keep a secure backup of certificates and BlueZ pairing data if moving the setup.
+
+### Shared Wii U and Switch identity
+
+Use the Nintendo Pro Controller prefix `94:58:CB` for the shared radio. The tested
+identity is `94:58:CB:DA:71:16`. The older `00:1E:35` Wii identity can bond with the
+Switch but is rejected before completing controller setup. The Pro Controller
+identity works with both emulators and avoids address resets between commands.
+
+When migrating an existing installation, update the supervisor's address argument
+and the Unraid client's `controller_address` together, then restart the relay.
+The existing Wii U must be paired once with the new identity. Preserve the old
+`/data/bluetooth/<old-controller-address>` directory as a rollback copy; do not
+rename it or copy its keys to claim a new bond. Pairing creates a separate store
+for the new address. This is a RAM-only address change; no adapter flash write is
+required.

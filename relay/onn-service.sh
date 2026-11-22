@@ -13,6 +13,6 @@ while true; do
   if [ -f "$BASE/logs/relay.log" ] && [ "$(wc -c < "$BASE/logs/relay.log")" -gt 1000000 ]; then
     mv -f "$BASE/logs/relay.log" "$BASE/logs/relay.previous.log"
   fi
-  "$BASE/onn-usb-relay" "$BASE" 18765 00:1E:35:DA:71:16 >> "$BASE/logs/relay.log" 2>&1
+  "$BASE/onn-usb-relay" "$BASE" 18765 94:58:CB:DA:71:16 >> "$BASE/logs/relay.log" 2>&1
   sleep 3
 done

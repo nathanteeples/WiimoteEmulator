@@ -212,3 +212,11 @@ controller reports are limited to 15 Hz. See the upstream
 [firmware compatibility discussion](https://github.com/mart1nro/joycontrol/issues/104).
 The pairing log shows connection attempts and authentication results using a
 read-only HCI event filter that excludes link-key notifications.
+
+The shared ONN radio uses the Pro Controller identity `94:58:CB:DA:71:16` for
+both Wii U and Switch. Older Wii-only installations using a `00:1E:35` identity
+need one new Wii U pairing after migration. See the relay migration notes.
+Switch pairing also requires BlueZ 5 agent callbacks on the private D-Bus and
+`JustWorksRepairing=confirm`: the pairing agent authorizes the Switch's repeated
+bonding exchange during its pairing window. The packaged CI checks exercise the
+actual D-Bus policy, typed adapter properties, and container restart behavior.
